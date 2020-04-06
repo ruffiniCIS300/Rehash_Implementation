@@ -1,5 +1,5 @@
 ﻿/* DictionaryTests.cs
- * Author: Rod Howell
+ * Author: Nick Ruffini
  */
 using NUnit.Framework;
 using System;
@@ -13,6 +13,18 @@ namespace Ksu.Cis300.NameLookup.Tests
     [TestFixture]
     public class DictionaryTests
     {
+        /// <summary>
+        /// Tests that Count is implemented as a property with a private set accessor.
+        /// If the test throws a NullReferenceException, make sure that Count is
+        /// implemented as a property, not as a method.
+        /// </summary>
+        [Test, Timeout(1000)]
+        public void TestACountIsProperty()
+        {
+            Type type = new Dictionary<string, int>().GetType();
+            Assert.That(type.GetProperty("Count").SetMethod.IsPrivate, Is.True);
+        }
+
         /// <summary>
         /// Tests that looking up a nonexistent key gives a value of false and sets the out
         /// parameter to it default value.
@@ -31,7 +43,17 @@ namespace Ksu.Cis300.NameLookup.Tests
         }
 
         /// <summary>
-        /// Tests that when a duplicate key is added, the proper exception is thrown.
+        /// Tests the Count property for an empty dictionary.
+        /// </summary>
+        [Test, Timeout(1000)]
+        public void TestACountEmpty()
+        {
+            Dictionary<string, int> d = new Dictionary<string, int>();
+            Assert.That(d.Count, Is.EqualTo(0));
+        }
+
+        /// <summary>
+        /// Tests that wehn a duplicate key is added, the proper exception is thrown.
         /// </summary>
         [Test, Timeout(1000)]
         public void TestAAddDuplicateKey()
@@ -48,6 +70,17 @@ namespace Ksu.Cis300.NameLookup.Tests
                 e = ex;
             }
             Assert.That(e, Is.Not.Null.And.TypeOf(typeof(ArgumentException)));
+        }
+
+        /// <summary>
+        /// Tests the Count after adding a key and value.
+        /// </summary>
+        [Test, Timeout(1000)]
+        public void TestBCountOne()
+        {
+            Dictionary<int, double> d = new Dictionary<int, double>();
+            d.Add(17, 32);
+            Assert.That(d.Count, Is.EqualTo(1));
         }
 
         /// <summary>
@@ -77,7 +110,7 @@ namespace Ksu.Cis300.NameLookup.Tests
         {
             Dictionary<HashTableTester, string> d = new Dictionary<HashTableTester, string>();
             HashTableTester k1 = new HashTableTester(1000);
-            HashTableTester k2 = new HashTableTester(1023);
+            HashTableTester k2 = new HashTableTester(1025);
             d.Add(k1, "first");
             d.Add(k2, "second");
             string v;
@@ -96,7 +129,7 @@ namespace Ksu.Cis300.NameLookup.Tests
         public void TestCAddTwoLookUpSecond()
         {
             Dictionary<HashTableTester, string> d = new Dictionary<HashTableTester, string>();
-            HashTableTester k1 = new HashTableTester(10000);
+            HashTableTester k1 = new HashTableTester(9998);
             HashTableTester k2 = new HashTableTester(10023);
             d.Add(k1, "first");
             d.Add(k2, "second");
@@ -117,8 +150,8 @@ namespace Ksu.Cis300.NameLookup.Tests
         {
             Dictionary<HashTableTester, int> d = new Dictionary<HashTableTester, int>();
             HashTableTester k1 = new HashTableTester(700);
-            HashTableTester k2 = new HashTableTester(723);
-            HashTableTester k3 = new HashTableTester(746);
+            HashTableTester k2 = new HashTableTester(725);
+            HashTableTester k3 = new HashTableTester(745);
             d.Add(k1, 1);
             d.Add(k2, 2);
             d.Add(k3, 3);
@@ -134,24 +167,24 @@ namespace Ksu.Cis300.NameLookup.Tests
         }
 
         /// <summary>
-        /// Test that two keys with hash codes that differ by 23 map to the same location.
+        /// Test that two keys with hash codes that differ by 25 map to the same location.
         /// </summary>
         [Test, Timeout(1000)]
         public void TestETwoInstancesSameLocation()
         {
             Dictionary<HashTableTester, int> d = new Dictionary<HashTableTester, int>();
-            HashTableTester k1 = new HashTableTester(100, true);
-            HashTableTester k2 = new HashTableTester(123, true);
+            HashTableTester k1 = new HashTableTester(100);
+            HashTableTester k2 = new HashTableTester(125, true);
             d.Add(k1, 7);
             int v;
-            // Because k1 and k2 are constructed to be equal to all other instances of HashTableTester, the dictionary
+            // Because k2 is equal to any key, the dictionary
             // should find k2 if it maps to the same array location as k1.
             Assert.That(d.TryGetValue(k2, out v), Is.True);
         }
 
         /// <summary>
-        /// Adds 22 keys that should end up in different locations, then checks whether each
-        /// of the 23 locations has a key.
+        /// Adds 4 keys that should end up in different locations, then checks whether each
+        /// of the 5 locations has a key.
         /// </summary>
         [Test, Timeout(1000)]
         public void TestEDifferentLocations()
@@ -159,9 +192,9 @@ namespace Ksu.Cis300.NameLookup.Tests
             Dictionary<HashTableTester, int> d = new Dictionary<HashTableTester, int>();
             List<int> elements = new List<int>(); // Will contain the values stored in the dictionary
             elements.Add(0); // Represents one hash table location that will remain empty.
-            for (int i = 500; i < 522; i++)
+            for (int i = 500; i < 504; i++)
             {
-                d.Add(new HashTableTester(i, true), i);
+                d.Add(new HashTableTester(i), i);
                 elements.Add(i);
             }
             List<int> retrieved = new List<int>();
@@ -172,10 +205,153 @@ namespace Ksu.Cis300.NameLookup.Tests
             // in the list at that location. The first list checked should be
             // empty, and the others should contain the elements added in the above
             // loop, in the same order.
-            for (int i = 522; i < 545; i++)
+            for (int i = 504; i < 509; i++)
             {
                 int v;
                 d.TryGetValue(new HashTableTester(i, true), out v);
+                retrieved.Add(v);
+            }
+            Assert.That(retrieved, Is.Ordered.And.EquivalentTo(elements));
+        }
+
+        /// <summary>
+        /// Tests that adding 5 keys and values does not cause a rehash to occur.
+        /// </summary>
+        [Test, Timeout(1000)]
+        public void TestFAddFive()
+        {
+            Dictionary<HashTableTester, int> d = new Dictionary<HashTableTester, int>();
+            List<int> elements = new List<int>(); // Will contain the values stored in the dictionary
+            for (int i = 199; i < 204; i++)
+            {
+                d.Add(new HashTableTester(i), i);
+                elements.Add(i);
+            }
+            List<int> retrieved = new List<int>();
+
+            // The following loop should check each of the table locations.
+            // If the location contains an empty list, v will be set to 0.
+            // Otherwise, v will be set to the value from the first key-value pair
+            // in the list at that location. The locations checked should contain 
+            // the elements added in the above
+            // loop, in the same order.
+            for (int i = 204; i < 209; i++)
+            {
+                int v;
+                d.TryGetValue(new HashTableTester(i, true), out v);
+                retrieved.Add(v);
+            }
+            Assert.That(retrieved, Is.Ordered.And.EquivalentTo(elements));
+        }
+
+        /// <summary>
+        /// Tests rehashing by adding 6 keys that should end up in different lists
+        /// after the rehashing is done.
+        /// </summary>
+        [Test, Timeout(1000)]
+        public void TestGRehash()
+        {
+            Dictionary<HashTableTester, int> d = new Dictionary<HashTableTester, int>();
+            List<int> elements = new List<int>();
+            for (int i = 0; i < 5; i++)
+            {
+                elements.Add(0); // Represents 5 empty linked lists.
+            }
+            for (int i = 1; i < 7; i++)
+            {
+                d.Add(new HashTableTester(i), i);
+                elements.Add(i);
+            }
+            List<int> retrieved = new List<int>();
+
+            // The following loop should check each of the table locations.
+            // If the location contains an empty list, v will be set to 0.
+            // Otherwise, v will be set to the value from the first key-value pair
+            // in the list at that location. The locations checked should contain 
+            // five empty lists, followed by the elements added in the above
+            // loop, in the same order.
+            for (int i = 7; i < 18; i++)
+            {
+                int v;
+                d.TryGetValue(new HashTableTester(i, true), out v);
+                retrieved.Add(v);
+            }
+            Assert.That(retrieved, Is.Ordered.And.EquivalentTo(elements));
+        }
+
+        /// <summary>
+        /// Tests rehashing when all elements should end up in the same list after
+        /// rehashing.
+        /// </summary>
+        [Test, Timeout(1000)]
+        public void TestHRehashToSameList()
+        {
+            Dictionary<HashTableTester, int> d = new Dictionary<HashTableTester, int>();
+            List<int> elements = new List<int>();
+            for (int i = 0; i < 10; i++)
+            {
+                elements.Add(0); // Reprensents 10 empty lists.
+            }
+            for (int i = 50; i < 116; i += 11)
+            {
+                d.Add(new HashTableTester(i), i); // Adds 6 keys that should end up in the same list after rehashing
+                elements.Add(i);
+            }
+            List<int> retrieved = new List<int>();
+            int v;
+
+            // The following loop checks 10 of the lists, each of which should be empty.
+            // It should add ten 0s to retrieved.
+            for (int i = 51; i < 61; i++)
+            {
+                d.TryGetValue(new HashTableTester(i, true), out v);
+                retrieved.Add(v);
+            }
+
+            // The following loop looks up all the keys that were added and adds the retrieved
+            // values to retrieved.
+            for (int i = 50; i < 116; i += 11)
+            {
+                d.TryGetValue(new HashTableTester(i), out v);
+                retrieved.Add(v);
+            }
+            Assert.That(retrieved, Is.Ordered.And.EquivalentTo(elements));
+        }
+
+        /// <summary>
+        /// Tests rehashing twice such that all elements should end up in the same list after
+        /// the second rehash.
+        /// </summary>
+        [Test, Timeout(1000)]
+        public void TestIDoubleRehashToSameList()
+        {
+            Dictionary<HashTableTester, int> d = new Dictionary<HashTableTester, int>();
+            List<int> elements = new List<int>();
+            for (int i = 0; i < 22; i++)
+            {
+                elements.Add(0); // Reprensents 22 empty lists.
+            }
+            for (int i = 100; i < 376; i += 23)
+            {
+                d.Add(new HashTableTester(i), i); // Adds 12 keys that should end up in the same list after rehashing twice
+                elements.Add(i);
+            }
+            List<int> retrieved = new List<int>();
+            int v;
+
+            // The following loop checks 22 of the lists, each of which should be empty.
+            // It should add 22 0s to retrieved.
+            for (int i = 101; i < 123; i++)
+            {
+                d.TryGetValue(new HashTableTester(i, true), out v);
+                retrieved.Add(v);
+            }
+
+            // The following loop looks up all the keys that were added and adds the retrieved
+            // values to retrieved.
+            for (int i = 100; i < 376; i += 23)
+            {
+                d.TryGetValue(new HashTableTester(i), out v);
                 retrieved.Add(v);
             }
             Assert.That(retrieved, Is.Ordered.And.EquivalentTo(elements));

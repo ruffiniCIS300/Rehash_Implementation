@@ -1,5 +1,5 @@
 ﻿/* Dictionary.cs
- * Author: Rod Howell
+ * Author: Nick Ruffini
  */
 using System;
 using System.Collections.Generic;
@@ -20,7 +20,34 @@ namespace Ksu.Cis300.NameLookup
         /// <summary>
         /// The keys and values in the dictionary.
         /// </summary>
-        private LinkedListCell<KeyValuePair<TKey, TValue>>[] _elements = new LinkedListCell<KeyValuePair<TKey, TValue>>[23];
+        private LinkedListCell<KeyValuePair<TKey, TValue>>[] _elements = new LinkedListCell<KeyValuePair<TKey, TValue>>[_startingSize];
+
+        /// <summary>
+        /// Constant integer value representing the starting size of the table!
+        /// </summary>
+        private const int _startingSize = 5;
+
+        /// <summary>
+        /// An array containing the allowable sizes of the table
+        /// </summary>
+        private int[] _tableSizes =
+        {
+            _startingSize, 11, 23, 47, 97, 197, 397, 797, 1597, 3203, 6421, 12853, 25717,
+            51437, 102877, 205759, 411527, 823117, 1646237, 3292489, 6584983,
+            13169977, 26339969, 52679969, 105359939, 210719881, 421439783,
+            842879579, 1685759167
+        };
+
+        /// <summary>
+        /// The index at which the current table size is stored in the above array
+        /// </summary>
+        private int _currentIndex = 0;
+
+        /// <summary>
+        /// Keeps track of the number of keys (or equivalently, values) currently stored in the hash table
+        /// Initialized to 0!
+        /// </summary>
+        public int Count { get; private set; } = 0;
 
         /// <summary>
         /// Checks to see if the given key is null, and if so, throws an
@@ -129,6 +156,29 @@ namespace Ksu.Cis300.NameLookup
             LinkedListCell<KeyValuePair<TKey, TValue>> cell = new LinkedListCell<KeyValuePair<TKey, TValue>>();
             cell.Data = new KeyValuePair<TKey, TValue>(k, v);
             Insert(cell, loc);
+            Count++;
+            if (Count > _elements.Length)
+            {
+                // Check
+                if (_currentIndex < _tableSizes.Length - 1)
+                {
+                    LinkedListCell<KeyValuePair<TKey, TValue>>[] temp = _elements;
+                    _currentIndex++;
+                    int newSize = _tableSizes[_currentIndex];
+                    _elements = new LinkedListCell<KeyValuePair<TKey, TValue>>[newSize];
+
+                    for (int i = 0; i < temp.Length; i++)
+                    {
+                        while (temp[i] != null)
+                        {
+                            LinkedListCell<KeyValuePair<TKey, TValue>> front = temp[i];
+                            temp[i] = temp[i].Next;
+                            int newLocation = GetLocation(front.Data.Key);
+                            Insert(front, newLocation);
+                        }
+                    }
+                }
+            }
         }
     }
 }
